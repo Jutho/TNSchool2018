@@ -10,8 +10,7 @@ function statmechmpo(β, h, D)
     for j = 1:D, i = 1:D
         X[i,j] = exp(-β*h(i,j))
     end
-    X2 = sqrt(X)
-    @tensor M[a,b,c,d] := M[a',b',c',d']*X[c',c]*X[d',d]*X[a,a']*X[b,b']
+    @tensor M[a,b,c,d] := M[a,b,c',d']*X[c',c]*X[d',d]
     return M
 end
 
