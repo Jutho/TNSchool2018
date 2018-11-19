@@ -21,3 +21,6 @@
 # Uniform MPS, VUMPS and fixed points of MPO transfer matrices
 
 1.  Complete the routines in mps.jl, look for "TODO" comments in the code.
+2.  Compute the internal energy, free energy and entropy of the Ising model
+3.  Experiment with different temperatures below and above the critical point
+4.  Challenge: can you also compute the magnetization?

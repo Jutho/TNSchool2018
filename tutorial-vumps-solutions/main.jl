@@ -40,13 +40,27 @@ A = randn(D, 2, D) + im*randn(D, 2, D)
 # Strategy 1:
 # Compute energy by contracting M2 with two mps tensors in ket and bra, and the boundaries FL and FR.
 # Make sure everything is normalized by dividing through the proper contribution of the partition function
-# TODO
+@tensor AAC[α,s1,s2,β] := AL[α,s1,α']*C[α',β']*AR[β',s2,β]
+
+@tensor Z2 = scalar(FL[α,c,β]*AAC[β,s1,s2,β']*M[c,t1,d,s1]*M[d,t2,c',s2]*FR[β',c',α']*conj(AAC[α,t1,t2,α']))
+@tensor energy = scalar(FL[α,c,β]*AAC[β,s1,s2,β']*M2[c,t1,t2,c',s2,s1]*FR[β',c',α']*conj(AAC[α,t1,t2,α']) / Z2)
 
 # Strategy 2:
 # Compute energy using thermodynamic relations: Z = λ^N, i.e. λ is the partition function per site
 # E = - d log(Z) / d β => energy (density) = - d log(λ) / d β
 # where derivatives are evaluated using finite differences
-# TODO
+dβ = 1.e-5
+β′ = β + dβ
+M′, = classicalisingmpo(β′)
+λ′, = vumps(AL, M′; tol = 1e-10)
+energy2 = -(log(λ′)-log(λ))/(β′-β)
+
+@assert isapprox(energy2, 2*energy; rtol = 10*dβ)
+ # factor 2 for counting horizontal and vertical links
 
 # also compute free energy and entropy
-# TODO
+f = -log(λ)/β
+S = -β*(f - energy2)
+
+f′ = -log(λ′)/β′
+Salt = β^2*(f′-f)/(β′-β)

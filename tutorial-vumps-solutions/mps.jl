@@ -91,7 +91,8 @@ a scalar factor `λ` such that ``λ C AR^s = A^s C``, where an initial guess for
 provided.
 """
 function rightorth(A, C = Matrix{eltype(A)}(I, size(A,1), size(A,1)); tol = 1e-12, kwargs...)
-    # TODO
+    AL, C, λ = leftorth(permutedims(A,(3,2,1)), permutedims(C,(2,1)); tol = tol, kwargs...)
+    return permutedims(C,(2,1)), permutedims(AL,(3,2,1)), λ
 end
 
 """
@@ -101,7 +102,7 @@ Apply the effective Hamiltonian on the center tensor `AC`, by contracting with t
 environment `FL` and `FR` and the MPO tensor `M`
 """
 function applyH1(AC, FL, FR, M)
-    # TODO
+    @tensor HAC[α,s,β] := FL[α,a,α']*AC[α',s',β']*M[a,s,b,s']*FR[β',b,β]
 end
 
 """
@@ -111,7 +112,7 @@ Apply the effective Hamiltonian on the bond matrix C, by contracting with the le
 environment `FL` and `FR`
 """
 function applyH0(C, FL, FR)
-    # TODO
+    @tensor HC[α,β] := FL[α,a,α']*C[α',β']*FR[β',a,β]
 end
 
 """
@@ -122,7 +123,7 @@ of A - M - conj(A) contracted along the physical dimension.
 """
 function leftenv(A, M, FL = randn(eltype(A), size(A,1), size(M,1), size(A,1)); kwargs...)
     λs, FLs, info = eigsolve(FL, 1, :LM; ishermitian = false, kwargs...) do FL
-        # TODO
+        @tensor FL[α,a,β] := FL[α',a',β']*A[β',s',β]*M[a',s,a,s']*conj(A[α',s,α])
     end
     return FLs[1], real(λs[1]), info
 end
@@ -134,7 +135,7 @@ of A - M - conj(A) contracted along the physical dimension.
 """
 function rightenv(A, M, FR = randn(eltype(A), size(A,1), size(M,1), size(A,1)); kwargs...)
     λs, FRs, info = eigsolve(FR, 1, :LM; ishermitian = false, kwargs...) do FR
-        # TODO
+        @tensor FR[α,a,β] := A[α,s',α']*FR[α',a',β']*M[a,s,a',s']*conj(A[β,s,β'])
     end
     return FRs[1], real(λs[1]), info
 end
@@ -161,7 +162,7 @@ function vumps(A, M; verbose = true, tol = 1e-6, kwargs...)
     i = 1
     verbose && println("Step $i: λ ≈ $λ ≈ $λL ≈ $λR, err ≈ $err")
     while err > tol
-        λ, AL, C, AR, = vumpsstep(AL, C, AR, M, FL, FR; tol = tol/10, kwargs...)
+        λ, AL, C, AR, = vumpsstep(AL, C, AR, M, FL, FR; tol = tol/10)
         AL, C, = leftorth(AR, C; tol = tol/10, kwargs...) # regauge MPS: not really necessary
         FL, λL = leftenv(AL, M, FL; tol = tol/10, kwargs...)
         FR, λR = rightenv(AR, M, FR; tol = tol/10, kwargs...)
@@ -192,6 +193,16 @@ function vumpsstep(AL, C, AR, M, FL, FR; kwargs...)
     AC = ACs[1]
     C = Cs[1]
 
-    # Obtain a new guess for AL and AR from the updated AC and C
-    # TODO
+    QAC, RAC = qrpos(reshape(AC,(D*d, D)))
+    QC, RC = qrpos(C)
+    AL = reshape(QAC*QC', (D, d, D))
+    errL = norm(RAC-RC)
+
+    LAC, QAC = lqpos(reshape(AC,(D, d*D)))
+    LC, QC = lqpos(C)
+
+    AR = reshape(QC'*QAC, (D, d, D))
+    errR = norm(LAC-LC)
+
+    return λ, AL, C, AR, errL, errR
 end
